@@ -7,7 +7,10 @@
 {% block main %}
 
     <form action="/register" method="post">
-        <input type="text">
+        <input type="text" name="username" placeholder="Username">
+        <input type="text" name="password" placeholder="Password">
+        <input type="text" name="confirmation" placeholder="Confirm Password">
+        <button type="submit">Register</button>
     </form>
 
 {% endblock %}
