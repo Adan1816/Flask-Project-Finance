@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Quote
+{% endblock %}
+
+{% block main %}
+    <form action="/quote" method="post">
+        {% if quote %}
+            <p>Name: {{ quote.name }}</p>
+            <p>Price: {{ quote.price }}</p>
+            <p>Symbol: {{ quote.symbol }}</p>
+        {% endif %}
+    </form>
+{% endblock %}
