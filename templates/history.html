@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Purchase History
+{% endblock %}
+
+{% block main %}
+    <table>
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Name</th>
+                <th>Shares</th>
+                <th>Price</th>
+                <th>Total</th>
+                <th>Time</th>
+                <th>Buy/Sell</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in holdings %}
+            <tr>
+                <td>{{ h.symbol }}</td>
+                <td>{{ h.name }}</td>
+                <td>{{ h.shares }}</td>
+                <td>{{ h.price | usd }}</td>
+                <td>{{ h.total | usd }}</td>
+                <td>{{ h.time }}</td>
+                <td>{{ h.action }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        
+    </table>
+
+{% endblock %}

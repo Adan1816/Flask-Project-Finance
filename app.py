@@ -35,21 +35,155 @@ def after_request(response):
 @login_required
 def index():
     """Show portfolio of stocks"""
-    return apology("TODO")
+    rows = db.execute(
+        "SELECT symbol, SUM(shares) AS shares FROM purchases WHERE user_id = ? GROUP BY symbol HAVING SUM(shares) > 0",
+        session["user_id"]
+    )
+
+    user = db.execute(
+        "SELECT cash FROM users WHERE id = ?", session["user_id"]
+    )
+    if not user:
+        return apology("user not found", 403)
+    cash = user[0]["cash"]
+
+    holdings = []
+    stocks_total = 0.0
+
+    for row in rows:
+        symbol = row["symbol"]
+        shares = row["shares"]
+        quote =  lookup(symbol)
+        if quote is None:
+            price = 0.0
+            name = symbol
+        else:
+            price = float(quote["price"])
+            name = quote["name"]
+        total = shares * price
+        stocks_total += total
+        holdings.append({
+            "symbol": symbol,
+            "name": name,
+            "shares": shares,
+            "price": price,
+            "total": total
+        })
+    
+    grand_total = stocks_total + float(cash)
+
+    return render_template("index.html", holdings=holdings, cash=cash, stocks_total=stocks_total, grand_total=grand_total)
 
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
     """Buy shares of stock"""
-    return apology("TODO")
+    if request.method == "POST":
+        symbol = request.form.get("symbol")
+        if not symbol:
+            return apology("must provide a symbol", 403)
+        
+        quote = lookup(symbol)
+        if quote is None:
+            return apology("invalid symbol", 403)
+        
+        shares = request.form.get("shares")
+        try:
+            shares = int(shares)
+        except (ValueError, TypeError):
+            return apology("invalid number of shares", 403)
+
+        if not shares>0:
+            return apology("min share amount: 1", 403)
+
+        rows = db.execute(
+            "SELECT cash FROM users WHERE id = ?", session["user_id"]
+        )
+        if not rows:
+            return apology("user not found", 403)
+
+        cash = rows[0]["cash"] 
+        total_price = quote["price"] * shares
+
+        if total_price > cash:
+            return apology("not enough balance", 403)
+
+        try:
+            db.execute(
+                "UPDATE users SET cash = cash - ? WHERE id = ?",
+                total_price, session["user_id"]
+            )
+            
+            stock_data = db.execute(
+                "SELECT * FROM purchases WHERE symbol = ? AND user_id = ?",
+                quote["symbol"], session["user_id"]
+            )
+            if not stock_data:
+                db.execute(
+                    "INSERT INTO purchases (user_id, symbol, shares, price) VALUES (?,?,?,?)",
+                    session["user_id"], quote["symbol"], shares, quote["price"]
+                )
+            else:
+                db.execute(
+                    "UPDATE purchases SET shares = shares + ? WHERE user_id = ? AND symbol = ?",
+                     shares, session["user_id"], symbol
+                )
+            
+            db.execute(
+                "INSERT INTO history (user_id, symbol, shares, price, action) VALUES (?,?,?,?,?)",
+                session["user_id"], quote["symbol"], shares, quote["price"], "buy"
+            )
+
+            flash("Purchase Successful!")
+            return redirect("/")
+        except Exception as e:
+            return apology("Transaction Failed", 403)
+        
+    
+    else:
+        return render_template("buy.html")       
+        
 
 
 @app.route("/history")
 @login_required
 def history():
     """Show history of transactions"""
-    return apology("TODO")
+    rows = db.execute(
+        "SELECT * FROM history WHERE user_id = ?",
+        session["user_id"]
+    )
+
+    holdings = []
+    
+
+    for row in rows:
+        symbol = row["symbol"]
+        shares = row["shares"]
+        quote =  lookup(symbol)
+        if quote is None:
+            price = 0.0
+            name = symbol
+        else:
+            price = float(quote["price"])
+            name = quote["name"]
+        total = shares * price
+        
+        time = row["timestamp"]
+        action = row["action"]
+
+        holdings.append({
+            "symbol": symbol,
+            "name": name,
+            "shares": shares,
+            "price": price,
+            "total": total,
+            "time": time,
+            "action": action
+        })
+
+    return render_template("history.html", holdings=holdings)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -107,11 +241,13 @@ def logout():
 def quote():
     """Get stock quote."""
     if request.method == "GET":
-        symbol = request.form.get("symbol")
+        
         return render_template("quote.html")
     
     else:
+        symbol = request.form.get("symbol")
         quote_value = lookup(symbol)
+        print(f"Lookup result: {quote_value}")
         return render_template("quoted.html", quote=quote_value)
 
 
@@ -147,4 +283,56 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
-    return apology("TODO")
+    if request.method == "GET":
+        symbols = db.execute(
+            "SELECT symbol, SUM(shares) AS shares FROM purchases WHERE user_id = ? GROUP BY symbol HAVING SUM (shares) > 0",
+            session["user_id"]
+        )
+        return render_template("sell.html", symbols=symbols)
+    
+    symbol = request.form.get("symbol")
+    if not symbol:
+        return apology("must select a symbol", 403)
+    
+    owned = db.execute(
+        "SELECT COALESCE(SUM(shares), 0) AS shares FROM purchases WHERE user_id=? AND symbol=?",
+        session["user_id"], symbol.upper() 
+    )
+    owned_shares = owned[0]["shares"] if owned else 0
+
+    shares = request.form.get("shares")
+    try:
+        shares = int(shares)
+    except (ValueError, TypeError):
+        return apology("Invalid Number of Shares", 403)
+    
+    if shares<= 0:
+        return apology("Enter a positive integer", 403)
+    
+    if shares > owned_shares:
+        return apology("You Don't Own Enough Shares", 403)
+    
+    quote = lookup(symbol)
+    price = float(quote["price"])
+    proceeds = price * shares
+    rem_shares = owned_shares - shares
+
+    db.execute(
+        "UPDATE users SET cash = cash + ? WHERE id = ?",
+        proceeds, session["user_id"]
+    )
+
+    query = f"UPDATE purchases SET shares = {rem_shares} WHERE user_id = {session['user_id']} AND symbol = {symbol.upper()}"
+    print(query)
+    
+    db.execute(
+        "UPDATE purchases SET shares = ? WHERE user_id = ? AND symbol = ?",
+        rem_shares, session["user_id"], symbol.upper()
+    )
+
+    db.execute(
+        "INSERT INTO history (user_id, symbol, shares, price, action) VALUES (?,?,?,?,?)",
+        session["user_id"], quote["symbol"], shares, quote["price"], "sell"
+    )
+    
+    return redirect("/")

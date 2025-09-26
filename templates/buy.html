@@ -1,15 +1,15 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Quote
+    Buy Stocks
 {% endblock %}
 
 {% block main %}
-    <form action="/quote" method="post">
+
+    <form action="/buy" method="post">
         <input type="text" name="symbol" placeholder="symbol(e.g. NFLX)">
+        <input type="text" name="shares" placeholder="number of shares">
         <button type="submit">Submit</button>
     </form>
 
-    {% block quote %}{% endblock %}
 {% endblock %}
-

@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Flask (app.py, no reload)",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "flask",
+        "env": {
+          "FLASK_APP": "app.py",
+          "FLASK_ENV": "development"
+        },
+        "args": [
+          "run",
+          "--no-debugger",
+          "--no-reload",
+          "--port", "5000"
+        ],
+        "jinja": true,
+        "console": "integratedTerminal"
+      }
+    ]
+  }
