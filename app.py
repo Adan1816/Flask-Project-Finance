@@ -127,7 +127,7 @@ def buy():
             else:
                 db.execute(
                     "UPDATE purchases SET shares = shares + ? WHERE user_id = ? AND symbol = ?",
-                     shares, session["user_id"], symbol
+                     shares, session["user_id"], quote["symbol"]
                 )
             
             db.execute(
