@@ -5,38 +5,41 @@
 {% endblock %}
 
 {% block main %}
-    <table>
-        <thead>
+    <table class="table table-hover">
+        <thead class="table-dark">
             <tr>
-                <th>Symbol</th>
-                <th>Name</th>
-                <th>Shares</th>
-                <th>Price</th>
-                <th>Total</th>
+                <th scope="col">Symbol</th>
+                <th scope="col">Name</th>
+                <th scope="col">Shares</th>
+                <th scope="col">Price</th>
+                <th scope="col">Total</th>
             </tr>
         </thead>
         <tbody>
             {% for h in holdings %}
             <tr>
-                <td>{{ h.symbol }}</td>
+                <th scope="row">{{ h.symbol }}</th>
                 <td>{{ h.name }}</td>
                 <td>{{ h.shares }}</td>
                 <td>{{ h.price | usd }}</td>
                 <td>{{ h.total | usd }}</td>
             </tr>
             {% endfor %}
+            <tr class="border-0">
+                <td colspan="5" style="height: 20px; border: none;"></td>
+            </tr>
         </tbody>
-        <tfoot>
+        <tfoot class="table-dark">
             <tr>
-                <th>Cash</th>
+                <th scope="row">Cash</th>
                 <th>{{ cash | usd }}</th>
             </tr>
             <tr>
-                <th>Aggregate Stock Price</th>
+                <th scope="row">Aggregate Stock Price</th>
                 <th>{{ stocks_total | usd }}</th>
             </tr>
             <tr>
-                <th>Net Worth</th>
+                <th scope="row">Net Worth</th>
                 <th>{{ grand_total | usd }}</th>
             </tr>
         </tfoot>
